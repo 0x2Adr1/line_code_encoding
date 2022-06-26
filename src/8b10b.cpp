@@ -1,12 +1,12 @@
 #include <cstdio>
 #include <cstdlib>
-#include <cstdint>
 #include <limits>
-#include <unordered_map>
 
 #include <fmt/core.h>
 
 #include <cassert>
+
+#include "8b10b.hpp"
 
 /*
  * Constraints:
@@ -14,26 +14,19 @@
  * - The difference between the count of zeros and ones is not more than two
  */
 
-using Symbol = uint16_t;
-
-using mapping_8b_to_10b_t = std::unordered_map<uint8_t, Symbol>;
-using mapping_10b_to_8b_t = std::unordered_map<Symbol, uint8_t>;
-
-static bool check_consecutive_bits(Symbol symbol)
+bool check_consecutive_bits(Symbol symbol)
 {
     int i = 0;
 
     while (i < 10) {
-        int consecutive = 1;
+        int consecutive = 0;
 
         const uint8_t bit = symbol & 1;
 
-        symbol >>= 1;
-        i++;
-
         while (i < 10 && bit == (symbol & 1)) {
-            i++;
             consecutive++;
+
+            i++;
             symbol >>= 1;
         }
 
@@ -45,7 +38,7 @@ static bool check_consecutive_bits(Symbol symbol)
     return true;
 }
 
-static bool check_count_zeros_ones(Symbol symbol)
+bool check_count_zeros_ones(Symbol symbol)
 {
     int one_count = 0;
     int zero_count = 0;
@@ -65,9 +58,9 @@ static bool backtracking(const uint8_t byte,
                          mapping_8b_to_10b_t& map,
                          mapping_10b_to_8b_t& map_reverse,
                          Symbol symbol = 0,
-                         int n = 0)
+                         int depth = 0)
 {
-    if (n == 9) {
+    if (depth == 9) {
         if (!check_consecutive_bits(symbol)) {
             return false;
         }
@@ -87,19 +80,19 @@ static bool backtracking(const uint8_t byte,
     }
 
     // Add a one to the symbol value
-    if (backtracking(byte, map, map_reverse, symbol | (1 << (n + 1)), n + 1)) {
+    if (backtracking(byte, map, map_reverse, symbol | (1 << (depth + 1)), depth + 1)) {
         return true;
     }
 
     // Add a zero to the symbol value
-    if (backtracking(byte, map, map_reverse, symbol, n + 1)) {
+    if (backtracking(byte, map, map_reverse, symbol, depth + 1)) {
         return true;
     }
 
     return false;
 }
 
-int main()
+mapping_8b_to_10b_t map_8b10b_create()
 {
     mapping_8b_to_10b_t map;
     mapping_10b_to_8b_t map_reverse;
@@ -111,15 +104,18 @@ int main()
 
         if (!ret) {
             printf("error for %zu\n", i);
-            assert(false);
+            return {};
         }
     }
 
     assert(map.size() == 256);
 
+    return map;
+}
+
+void print_mapping(const mapping_8b_to_10b_t& map)
+{
     for (const auto [k, v] : map) {
         fmt::print("{:02X} -> {:010b}\n", k, v);
     }
-
-    return EXIT_SUCCESS;
 }
